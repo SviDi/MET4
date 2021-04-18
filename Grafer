@@ -110,3 +110,201 @@ myts_2
 # Mandag 16.03.20 er observert som 601 flygninger, 99.99% nedre intervall gir 808 flygninger. 
 # Klart at denne er "unormal". Søndag 15.03.20 er observert som 683 flygninger, 99.99% nedre
 # er 655 flygninger. Innenfor.
+
+
+
+
+
+
+
+
+##V20-A-besvarelse grafer med predikert vs observert totalt, innenlands og utenlands flygninge
+df_total_post$prediksjon1 = as.numeric(predict(reg1, 
+                                               newdata = df_total_post))
+
+df_total_post$prediksjon2 = as.numeric(predict(reg2,
+                                               newdata = df_total_post))
+
+df_total_post$prediksjon3 = as.numeric(predict(reg3, 
+                                               newdata = df_total_post))
+
+df_total_post$prediksjon4 = as.numeric(predict(reg4, 
+                                               newdata = df_total_post))
+
+df_total_post$prediksjon5 = as.numeric(predict(reg5,
+                                               newdata = df_total_post))
+
+df_total_post$prediksjon6 = as.numeric(predict(reg6,
+                                               newdata = df_total_post))
+
+ggplot(df_total, aes(x = dep_date, y = flights)) +
+  theme_classic() +
+  geom_line(col = "red",
+            size = 1) +
+  geom_line(data = df_total_post, aes(x = dep_date, y = prediksjon1),
+            col = "darkblue",
+            size = 1) +
+  labs(title = "Predikert mot observert antall totale flygninger",
+       x = "Dato",
+       y = "Antall daglige flygninger",
+       subtitle = "Rød er observert. Blå er predikert.") +
+  theme(plot.title = element_text(hjust = .5,
+                                  size = 14),
+        plot.subtitle = element_text(size = 10),
+        panel.background = element_rect(fill = "grey80"),
+        panel.grid.major = element_line(size = 1),
+        panel.grid.minor = element_line(size = 1),
+        axis.text.x = element_text(color = "black"),
+        axis.text.y = element_text(color = "black"),
+        axis.title.x = element_text(size = 10),
+        axis.title.y = element_text(size = 10)) +
+  scale_x_date(labels = date_format("%d-%m-%y"))
+
+c1 <- ggplot(df_total, aes(x = dep_date, y = flights_dom)) +
+  theme_classic() +
+  geom_line(col = "red",
+            size = 1) +
+  geom_line(data = df_total_post, aes(x = dep_date, y = prediksjon3),
+            col = "darkblue",
+            size = 1) +
+  labs(title = "Predikert mot observert antall innenlandsflygninger",
+       x = "Dato",
+       y = "Antall daglige flygninger",
+       subtitle = "Rød er observert. Blå er predikert.") +
+  theme(plot.title = element_text(hjust = .5,
+                                  size = 14),
+        plot.subtitle = element_text(size = 10),
+        panel.background = element_rect(fill = "grey80"),
+        panel.grid.major = element_line(size = 1),
+        panel.grid.minor = element_line(size = 1),
+        axis.text.x = element_text(color = "black"),
+        axis.text.y = element_text(color = "black"),
+        axis.title.x = element_text(size = 10),
+        axis.title.y = element_text(size = 10)) +
+  scale_x_date(labels = date_format("%d-%m-%y"))
+
+c2 <- ggplot(df_total, aes(x = dep_date, y = flights_int)) +
+  theme_classic() +
+  geom_line(col = "red",
+            size = 1) +
+  geom_line(data = df_total_post, aes(x = dep_date, y = prediksjon5),
+            col = "darkblue",
+            size = 1) +
+  labs(title = "Predikert mot observert antall utenlandsflygninger",
+       x = "Dato",
+       y = "Antall daglige flygninger",
+       subtitle = "Rød er observert. Blå er predikert.") +
+  theme(plot.title = element_text(hjust = .5,
+                                  size = 14),
+        plot.subtitle = element_text(size = 10),
+        panel.background = element_rect(fill = "grey80"),
+        panel.grid.major = element_line(size = 1),
+        panel.grid.minor = element_line(size = 1),
+        axis.text.x = element_text(color = "black"),
+        axis.text.y = element_text(color = "black"),
+        axis.title.x = element_text(size = 10),
+        axis.title.y = element_text(size = 10)) +
+  scale_x_date(labels = date_format("%d-%m-%y"))
+
+grid.arrange(c1, c2, nrow = 1)
+
+ggplot(df_total, aes(x = dep_date, y = cumflights)) +
+  theme_classic() +
+  geom_line(col = "red",
+            size = 1) +
+  geom_line(data = df_total_post, aes(x = dep_date, y = prediksjon2),
+            col = "darkblue",
+            size = 1) +
+  labs(title = "Predikert mot observert kumulativt totale flygninger",
+       x = "Dato",
+       y = "Kumulativt antall flygninger",
+       subtitle = "Rød er observert. Blå er predikert.") +
+  theme(plot.title = element_text(hjust = .5,
+                                  size = 14),
+        plot.subtitle = element_text(size = 10),
+        panel.background = element_rect(fill = "grey80"),
+        panel.grid.major = element_line(size = 1),
+        panel.grid.minor = element_line(size = 1),
+        axis.text.x = element_text(color = "black"),
+        axis.text.y = element_text(color = "black"),
+        axis.title.x = element_text(size = 10),
+        axis.title.y = element_text(size = 10)) +
+  scale_x_date(labels = date_format("%d-%m-%y"))
+
+df_total_post %>% 
+  select(trend, flights, flights_int, flights_dom) %>% 
+  filter(trend <= 63) %>% 
+  summarise(`Sum Totalt` = sum(flights),
+            `Sum Dom` = sum(flights_dom),
+            `Sum Int` = sum(flights_int)) %>%
+  stargazer::stargazer(type = "text", summary = FALSE, digits = 2)
+
+df_total_post %>% 
+  select(trend, flights, flights_int, flights_dom) %>% 
+  filter(trend < 70) %>% 
+  filter(trend > 63) %>% 
+  summarise(`Sum Totalt` = sum(flights),
+            `Sum Dom` = sum(flights_dom),
+            `Sum Int` = sum(flights_int)) %>%
+  stargazer::stargazer(type = "text", summary = FALSE, digits = 2)
+  
+  
+  
+  
+  
+  
+##V20-løsningsforslag grafer over predikert mot observert
+plot.reg <-
+ function(i){
+ df_total %>%
+ bind_cols(predictions[i]) %>%
+ filter(dep_date >= cutoff_date - 7) %>%
+ ggplot(aes(x=dep_date))+
+ geom_line(aes(y=get(dep.vars[i]), col=dep.vars[i]), lwd=1)+
+ geom_line(aes(y=fit, col="pred"), lwd=1)+
+ geom_vline(xintercept = as.numeric(cutoff_date), linetype = 4) +
+ ylab(dep.vars[i]) +
+ theme_classic() +
+ labs(col = "") +
+ ggtitle("")
+ }
+(
+ plot.reg(1)
+ / plot.reg(2)
+ / plot.reg(3)
+)
+
+
+##V20 løsning grafer over difference between the expectation and the realizations for the
+cumulative daily flights.
+
+plot.losses <-
+ function(i){
+ df_total %>%
+ bind_cols(predictions[i]) %>%
+ filter(dep_date >= cutoff_date) %>%
+ mutate(
+ lwr = (get(dep.vars[i])-lwr),
+ upr = (get(dep.vars[i])-upr),
+ fit = (get(dep.vars[i])-fit)) %>%
+ ggplot(aes(x=dep_date))+
+ geom_line(aes(y=fit, col="pred"), lwd=1)+
+ geom_ribbon(aes(ymin=lwr,ymax=upr), alpha=.25)+
+ geom_hline(yintercept = 0) +
+ ggtitle(dep.vars[i]) +
+ theme_classic() +
+ ylab("Cumulative losses, \n daily departures")+
+ theme(legend.position = "none") +
+ theme(axis.text.x = element_text(angle = 90, hjust = 1))
+ }
+plot.losses(4) + plot.losses(5) + plot.losses(6)
+
+
+
+
+
+##V20-a-besvarelse grafer over hvert flyskaps totale flygninger
+plot(x = df_nor$dep_date, y = df_nor$flights, type = "l", col = "red", 
+     ylim = c(0, 500), xlab = "Dato", ylab = "Antall flygninger", main = "Flyvninger per dag for Norwegian, SAS og Wideroe")
+lines(x = df_sas$dep_date, y = df_sas$flights, type = "l", col = "blue")
+lines(x = df_wid$dep_date, y = df_wid$flights, type = "l", col = "forestgreen")
