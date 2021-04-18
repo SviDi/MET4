@@ -1,0 +1,112 @@
+##V20-løsningsforslag med 3 grafer fra totalt, internasjonale og innenlands flygninger med markering for endring i trend(kumulative)
+min_plot_date <- as.Date('2020-02-01')
+cutoff_date <- as.Date('2020-03-12')
+df_total %>%
+ filter(dep_date >= min_plot_date) %>%
+ ggplot(aes(x = dep_date)) +
+ geom_line(aes(y = cumflights, col = "Total")) +
+ geom_line(aes(y = cumflights_dom, col = "Domestic")) +
+ geom_line(aes(y = cumflights_int, col = "International")) +
+ geom_vline(xintercept = as.numeric(cutoff_date), linetype = 4) +
+ ylab("Cumulative daily flights") +
+ xlab("Date") +
+ labs(col = "") +
+ theme_classic() +
+ theme(legend.position = "top")
+ 
+ 
+ ##V20-løsningsforslag med 3 grafer fra totalt, internasjonale og innenlands flygninger med markering for endring i trend(totalt)
+ df_total %>%
+ filter(dep_date >= min_plot_date) %>%
+ filter(dep_date < Sys.Date()) %>%
+ ggplot(aes(x = dep_date)) +
+ geom_line(aes(y = flights, col = "Total")) +
+ geom_line(aes(y = flights_dom, col = "Domestic")) +
+ geom_line(aes(y = flights_int, col = "International")) +
+ geom_vline(xintercept = as.numeric(cutoff_date), linetype = 4) +
+ labs(col = "") +
+ theme_classic() +
+ theme(legend.position = "top")
+ 
+ 
+ ##V20-A besvarelse med graf over kun totale flygninger
+ a1 <- ggplot(df_total, aes(x = dep_date, y = flights)) +
+  theme_classic() +
+  geom_line(col = "darkblue",
+            size = 1) +
+  geom_point(size = 1.3,
+             col = "darkblue") +
+  labs(title = "Totale antall flygninger per dag",
+       x = "Dato", 
+       y = "Antall flygninger") +
+  theme(plot.title = element_text(hjust = .5,
+                                  size = 18),
+        panel.background = element_rect(fill = "grey80"),
+        panel.grid.major = element_line(size = 1),
+        panel.grid.minor = element_line(size = 1),
+        axis.text.x = element_text(color = "black"),
+        axis.text.y = element_text(color = "black"),
+        axis.title.x = element_text(size = 12),
+        axis.title.y = element_text(size = 12)) +
+  scale_x_date(labels = date_format("%d-%m-%y"))
+
+a1
+
+
+##V20-A besvarelse med kun kumulative flygninger
+a2 <- ggplot(df_total, aes(x = dep_date, y = cumflights)) +
+  theme_classic() +
+  geom_line(col = "darkblue",
+            size = 1) +
+  labs(title = "Kumulative daglige flygninger",
+       x = "Dato",
+       y = "Antall flygnigner") +
+  theme(plot.title = element_text(hjust = .5,
+                                  size = 18),
+        panel.background = element_rect(fill = "grey80"),
+        panel.grid.major = element_line(size = 1),
+        panel.grid.minor = element_line(size = 1),
+        axis.text.x = element_text(color = "black"),
+        axis.text.y = element_text(color = "black"),
+        axis.title.x = element_text(size = 12),
+        axis.title.y = element_text(size = 12)) +
+  scale_x_date(labels = date_format("%d-%m-%y"))  
+a2
+
+
+##V20-a besvarelse hvor de setter grafene ved siden av hverandre
+grid.arrange(a1, a2, nrow = 1)
+
+##V20 a-besvarelse hvor predikert sammenlignes mot observert. Bruker ETS til å predikere tidsserier
+myts <- ts(df_total$flights, start = c(1, 1), end = c(7, 7), frequency = 7)
+
+myts_2 <- ts(df_total$flights, start = c(1, 1) , end = c(11, 7), frequency = 7)
+
+library(forecast)
+
+dekomponert <- stl(myts, s.window = "periodic")
+
+autoplot(dekomponert)
+
+prediksjon <- forecast(dekomponert, h = 28, level = c(.9999))
+prediksjon2 <- forecast(best_aic_pred_pre, h = 28, level = .9999)
+
+# Leter etter helt ekstreme utslag, derfor så tynt intervall. Leter ikke etter noe som 
+# skjer hver 20. dag.
+
+plot(prediksjon, type = "l", 
+     xlim = c(5, 12), col = "darkblue",
+     bty = "l", ylim = c(0, 1200),
+     xlab = "Ukenummer i datasettet",
+     ylab = "Antall flygnigner",
+     main = "Observert mot predikert antall flygnigner",
+     sub = "Blå er predikert. Rød er observert.")
+lines(myts_2, type = "b", pch = 20, col = "red")
+abline(v = 9, lty = 2, col = "cornflowerblue")
+
+prediksjon[["mean"]]
+prediksjon[["lower"]]
+myts_2
+# Mandag 16.03.20 er observert som 601 flygninger, 99.99% nedre intervall gir 808 flygninger. 
+# Klart at denne er "unormal". Søndag 15.03.20 er observert som 683 flygninger, 99.99% nedre
+# er 655 flygninger. Innenfor.
