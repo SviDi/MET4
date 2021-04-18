@@ -1,0 +1,406 @@
+##V20-løsningsforslag regresjonsutskrift 6 variabler
+dep.vars <- colnames(df_total)[grep("flight",colnames(df_total))]
+regressions <- vector("list", length(dep.vars))
+predictions <- vector("list", length(dep.vars))
+for(i in 1:length(dep.vars)){
+
+ form <-
+ formula(
+ paste0(
+ dep.vars[i],
+ "~trend + day_of_week"))
+
+ regressions[[i]] <-
+ lm(form,
+ data = df_total,
+ subset = dep_date < cutoff_date)
+
+ predictions[[i]] <-
+ predict(regressions[[i]],
+ newdata = df_total,
+ interval = "prediction") %>%
+ as.data.frame()
+}
+stargazer::stargazer(regressions,
+ type = "html")
+ 
+ 
+##V20-løsningsforslag div autokorrelasjonsplott?
+#plot(regressions[[1]])
+acf(regressions[[1]]$residuals)
+
+pacf(regressions[[1]]$residuals)
+
+#plot(regressions[[4]])
+acf(regressions[[4]]$residuals)
+
+pacf(regressions[[4]]$residuals)
+
+
+
+##V20-løsning in sample fit and observed time series
+plot.reg.in.sample <-
+ function(i) {
+ df_total %>%
+ bind_cols(predictions[i]) %>%
+ filter(dep_date < cutoff_date) %>%
+ ggplot(aes(x = dep_date)) +
+ geom_line(aes(y = get(dep.vars[i]), col = dep.vars[i]), lwd = 1) +
+ geom_line(aes(y = fit, col = "pred"), lwd = 1) +
+ ylab(dep.vars[i]) +
+ theme_classic() +
+ labs(col = "") +
+ ggtitle("In sample fit and observed time series")
+ }
+(
+ plot.reg.in.sample(1)
+ / plot.reg.in.sample(2)
+ / plot.reg.in.sample(2)
+)
+
+
+# Diagnoseplott fra v20 a-besvarelse
+layout(matrix(c(1, 1, 1, 1), nrow = 2, byrow = FALSE))
+
+p1 <- ggplot(reg1, aes(x = reg1$fitted.values, y = reg1$residuals, col = reg1$model$day_of_week)) + 
+  theme_classic() +
+  geom_point() +
+  geom_hline(yintercept = 0,
+             color = "darkblue") + 
+  labs(title = "Residualer etter prediksjon",
+       x = "Predikert antall flygninger",
+       y = "Residualer") +
+  theme(plot.title = element_text(hjust = .5,
+                                  size = 14),
+        panel.background = element_rect(fill = "grey80"),
+        panel.grid.major = element_line(size = 1),
+        panel.grid.minor = element_line(size = 1),
+        axis.text.x = element_text(color = "black"),
+        axis.text.y = element_text(color = "black"),
+        axis.title.x = element_text(size = 10),
+        axis.title.y = element_text(size = 10)) +
+  scale_color_discrete(name = "Ukedag",
+                       labels = c("Søndag", "Mandag", "Tirsdag", "Onsdag", "Torsdag", "Fredag", "Lørdag"))
+p1
+#acf(reg1$residuals, main = "Autokorrelasjonsplott",
+#   xlab = "Antall observasjoner tilbake", ylab = "Autokorrelasjonsfaktor",
+#   col = "darkblue", ci.col = "red", bty = "l")
+
+
+conf.level <- 0.95
+ciline <- qnorm((1 - conf.level)/2)/sqrt(length(reg1$residuals))
+bacf <- acf(reg1$residuals, plot = FALSE)
+bacfdf <- with(bacf, data.frame(lag, acf))
+
+acf(reg1$residuals, ci = .999)
+
+p2 <- ggplot(data = bacfdf, mapping = aes(x = lag, y = acf)) +
+  theme_classic() +
+  geom_hline(aes(yintercept = 0), col = "white") +
+  geom_segment(mapping = aes(xend = lag, yend = 0), col = "darkblue",
+               size = 1) +
+  geom_hline(aes(yintercept = ciline), col = "red",
+             linetype = "dashed") +
+  geom_hline(aes(yintercept = -ciline), col = "red",
+             linetype = "dashed") +
+  labs(title = "Autokorrelasjonsplott",
+       x = "Lag",
+       y = "Autokorrelasjonsfaktor") +
+  theme(plot.title = element_text(hjust = .5,
+                                  size = 14),
+        panel.background = element_rect(fill = "grey80"),
+        panel.grid.major = element_line(size = 1),
+        panel.grid.minor = element_line(size = 1),
+        axis.text.x = element_text(color = "black"),
+        axis.text.y = element_text(color = "black"),
+        axis.title.x = element_text(size = 10),
+        axis.title.y = element_text(size = 10)) 
+
+p2
+p3 <- ggplot(reg1, aes(x = reg1$residuals)) +
+  theme_classic() +
+  geom_histogram(fill = "darkblue",
+                 color = "white") +
+  labs(title = "Fordeling av residualer",
+       x = "Residualer",
+       y = "Frekvens") +
+  theme(plot.title = element_text(hjust = .5,
+                                  size = 14),
+        panel.background = element_rect(fill = "grey80"),
+        panel.grid.major = element_line(size = 1),
+        panel.grid.minor = element_line(size = 1),
+        axis.text.x = element_text(color = "black"),
+        axis.text.y = element_text(color = "black"),
+        axis.title.x = element_text(size = 10),
+        axis.title.y = element_text(size = 10)) 
+
+p4 <- ggplot(reg1, aes(sample = reg1$residuals)) +
+  theme_classic() +
+  geom_qq(color = "darkblue", pch = 1) +
+  geom_qq_line(color = "red", linetype = "dashed") +
+  labs(title = "Q-Q Plot av residualene",
+       x = "", y = "") +
+  theme(plot.title = element_text(hjust = .5,
+                                  size = 14),
+        panel.background = element_rect(fill = "grey80"),
+        panel.grid.major = element_line(size = 1),
+        panel.grid.minor = element_line(size = 1),
+        axis.text.x = element_text(color = "black"),
+        axis.text.y = element_text(color = "black"),
+        axis.title.x = element_text(size = 10),
+        axis.title.y = element_text(size = 10))
+
+
+grid.arrange(p1, p2, p3, p4, nrow = 2)
+# Reg2 - Kumulative flygninger totalt
+reg2 <- lm(cumflights ~ day_of_week + trend,
+           data = df_total_pre)
+
+stargazer(reg2, type = "text")
+
+ggplot(reg2, aes(x = reg2$fitted.values, y = reg2$residuals, col = reg2$model$day_of_week)) + 
+  theme_classic() +
+  geom_point() +
+  geom_hline(yintercept = 0,
+             color = "darkblue") + 
+  labs(title = "Residualer ved predikerte flygninger",
+       x = "Predikert antall flygninger",
+       y = "Residualer") +
+  theme(plot.title = element_text(hjust = .5,
+                                  size = 18),
+        panel.background = element_rect(fill = "grey80"),
+        panel.grid.major = element_line(size = 1),
+        panel.grid.minor = element_line(size = 1),
+        axis.text.x = element_text(color = "black"),
+        axis.text.y = element_text(color = "black"),
+        axis.title.x = element_text(size = 12),
+        axis.title.y = element_text(size = 12)) +
+  scale_color_discrete(name = "Ukedag",
+                       labels = c("Søndag", "Mandag", "Tirsdag", "Onsdag", "Torsdag", "Fredag", "Lørdag"))
+
+plot(reg2$residuals, type = "b",
+     ylab = "Residualer", xlab = "Observasjon nummer",
+     main = "Residualer mot indeks", col = "darkblue",
+     pch = 1, bty = "l")
+abline(h = 0, col = "red", lty = 2)
+
+acf(reg2$residuals, main = "Autokorrelasjonsplott",
+    xlab = "Antall observasjoner tilbake", ylab = "Autokorrelasjonsfaktor",
+    col = "darkblue", ci.col = "red", bty = "l")
+
+ggplot(reg2, aes(x = reg2$residuals)) +
+  theme_classic() +
+  geom_histogram(fill = "darkblue",
+                 color = "white") +
+  labs(title = "Fordeling av residualer",
+       x = "Residualer",
+       y = "Frekvens") +
+  theme(plot.title = element_text(hjust = .5,
+                                  size = 18),
+        panel.background = element_rect(fill = "grey80"),
+        panel.grid.major = element_line(size = 1),
+        panel.grid.minor = element_line(size = 1),
+        axis.text.x = element_text(color = "black"),
+        axis.text.y = element_text(color = "black"),
+        axis.title.x = element_text(size = 12),
+        axis.title.y = element_text(size = 12))
+
+ggplot(reg2, aes(sample = reg2$residuals)) +
+  theme_bw() +
+  geom_qq(color = "darkblue", pch = 1) +
+  geom_qq_line(color = "red", linetype = "dashed") +
+  labs(title = "Q-Q Plot av residualene",
+       x = "", y = "") +
+  theme(plot.title = element_text(hjust = .5,
+                                  size = 18),
+        panel.background = element_rect(fill = "grey80"),
+        panel.grid.major = element_line(size = 1),
+        panel.grid.minor = element_line(size = 1),
+        axis.text.x = element_text(color = "black"),
+        axis.text.y = element_text(color = "black"),
+        axis.title.x = element_text(size = 12),
+        axis.title.y = element_text(size = 12))
+
+# Reg3 - Innenlandsflygninger per dag
+reg3 <- lm(flights_dom ~ day_of_week,
+           data = df_total_pre)
+
+ggplot(reg3, aes(x = reg3$fitted.values, y = reg3$residuals, col = reg3$model$day_of_week)) + 
+  theme_bw() +
+  geom_point(
+    pch = 1) +
+  geom_hline(yintercept = 0,
+             color = "#84216B") + 
+  labs(title = "Residualer ved predikerte flygninger",
+       x = "Predikert antall flygninger",
+       y = "Residualer") +
+  theme(plot.title = element_text(hjust = .5)) 
+
+plot(reg3$residuals, type = "b",
+     ylab = "Residualer", xlab = "Observasjon nummer",
+     main = "Residualer mot indeks", col = "#84216B",
+     pch = 1, bty = "l")
+abline(h = 0, col = "#42B8B2", lty = 2)
+
+acf(reg3$residuals, main = "Autokorrelasjonsplott",
+    xlab = "Antall observasjoner tilbake", ylab = "Autokorrelasjonsfaktor",
+    col = "#84216B", ci.col = "#42B8B2", bty = "l")
+
+ggplot(reg3, aes(x = reg3$residuals)) +
+  theme_bw() +
+  geom_histogram(fill = "#84216B",
+                 color = "white") +
+  labs(title = "Fordeling av residualer",
+       x = "Residualer",
+       y = "Frekvens") +
+  theme(plot.title = element_text(hjust = .5)) 
+
+ggplot(reg3, aes(sample = reg3$residuals)) +
+  theme_bw() +
+  geom_qq(color = "#84216B", pch = 1) +
+  geom_qq_line(color = "#42B8B2", linetype = "dashed") +
+  labs(title = "Q-Q Plot av residualene",
+       x = "", y = "") +
+  theme(plot.title = element_text(hjust = .5))
+
+# Reg4 - Kumulative innenlandsflygninger 
+reg4 <- lm(cumflights_dom ~ day_of_week + trend,
+           data = df_total_pre)
+
+ggplot(reg4, aes(x = reg4$fitted.values, y = reg4$residuals, col = reg4$model$day_of_week)) + 
+  theme_bw() +
+  geom_point(
+    pch = 1) +
+  geom_hline(yintercept = 0,
+             color = "#84216B") + 
+  labs(title = "Residualer ved predikerte flygninger",
+       x = "Predikert antall flygninger",
+       y = "Residualer") +
+  theme(plot.title = element_text(hjust = .5)) 
+
+plot(reg4$residuals, type = "b",
+     ylab = "Residualer", xlab = "Observasjon nummer",
+     main = "Residualer mot indeks", col = "#84216B",
+     pch = 1, bty = "l")
+abline(h = 0, col = "#42B8B2", lty = 2)
+
+acf(reg4$residuals, main = "Autokorrelasjonsplott",
+    xlab = "Antall observasjoner tilbake", ylab = "Autokorrelasjonsfaktor",
+    col = "#84216B", ci.col = "#42B8B2", bty = "l")
+
+ggplot(reg4, aes(x = reg4$residuals)) +
+  theme_bw() +
+  geom_histogram(fill = "#84216B",
+                 color = "white") +
+  labs(title = "Fordeling av residualer",
+       x = "Residualer",
+       y = "Frekvens") +
+  theme(plot.title = element_text(hjust = .5)) 
+
+ggplot(reg4, aes(sample = reg4$residuals)) +
+  theme_bw() +
+  geom_qq(color = "#84216B", pch = 1) +
+  geom_qq_line(color = "#42B8B2", linetype = "dashed") +
+  labs(title = "Q-Q Plot av residualene",
+       x = "", y = "") +
+  theme(plot.title = element_text(hjust = .5))
+
+# Reg5 - Utenlandsflygninger per dag
+reg5 <- lm(flights_int ~ day_of_week,
+           data = df_total_pre)
+
+ggplot(reg5, aes(x = reg5$fitted.values, y = reg5$residuals, col = reg5$model$day_of_week)) + 
+  theme_bw() +
+  geom_point(
+    pch = 1) +
+  geom_hline(yintercept = 0,
+             color = "#84216B") + 
+  labs(title = "Residualer ved predikerte flygninger",
+       x = "Predikert antall flygninger",
+       y = "Residualer") +
+  theme(plot.title = element_text(hjust = .5)) 
+
+plot(reg5$residuals, type = "b",
+     ylab = "Residualer", xlab = "Observasjon nummer",
+     main = "Residualer mot indeks", col = "#84216B",
+     pch = 1, bty = "l")
+abline(h = 0, col = "#42B8B2", lty = 2)
+
+acf(reg5$residuals, main = "Autokorrelasjonsplott",
+    xlab = "Antall observasjoner tilbake", ylab = "Autokorrelasjonsfaktor",
+    col = "#84216B", ci.col = "#42B8B2", bty = "l")
+
+ggplot(reg5, aes(x = reg5$residuals)) +
+  theme_bw() +
+  geom_histogram(fill = "#84216B",
+                 color = "white") +
+  labs(title = "Fordeling av residualer",
+       x = "Residualer",
+       y = "Frekvens") +
+  theme(plot.title = element_text(hjust = .5)) 
+
+ggplot(reg5, aes(sample = reg5$residuals)) +
+  theme_bw() +
+  geom_qq(color = "#84216B", pch = 1) +
+  geom_qq_line(color = "#42B8B2", linetype = "dashed") +
+  labs(title = "Q-Q Plot av residualene",
+       x = "", y = "") +
+  theme(plot.title = element_text(hjust = .5))
+
+# Reg6 - Kumulative utenlandsflygninger
+reg6 <- lm(cumflights_int ~ day_of_week + trend,
+           data = df_total_pre)
+
+ggplot(reg6, aes(x = reg6$fitted.values, y = reg6$residuals, col = reg6$model$day_of_week)) + 
+  theme_bw() +
+  geom_point(
+    pch = 1) +
+  geom_hline(yintercept = 0,
+             color = "#84216B") + 
+  labs(title = "Residualer ved predikerte flygninger",
+       x = "Predikert antall flygninger",
+       y = "Residualer") +
+  theme(plot.title = element_text(hjust = .5)) 
+
+plot(reg6$residuals, type = "b",
+     ylab = "Residualer", xlab = "Observasjon nummer",
+     main = "Residualer mot indeks", col = "#84216B",
+     pch = 1, bty = "l")
+abline(h = 0, col = "#42B8B2", lty = 2)
+
+acf(reg6$residuals, main = "Autokorrelasjonsplott",
+    xlab = "Antall observasjoner tilbake", ylab = "Autokorrelasjonsfaktor",
+    col = "#84216B", ci.col = "#42B8B2", bty = "l")
+
+ggplot(reg6, aes(x = reg6$residuals)) +
+  theme_bw() +
+  geom_histogram(fill = "#84216B",
+                 color = "white") +
+  labs(title = "Fordeling av residualer",
+       x = "Residualer",
+       y = "Frekvens") +
+  theme(plot.title = element_text(hjust = .5)) 
+
+ggplot(reg6, aes(sample = reg6$residuals)) +
+  theme_bw() +
+  geom_qq(color = "#84216B", pch = 1) +
+  geom_qq_line(color = "#42B8B2", linetype = "dashed") +
+  labs(title = "Q-Q Plot av residualene",
+       x = "", y = "") +
+  theme(plot.title = element_text(hjust = .5))
+  
+  
+  
+  
+  
+  
+  
+  ##V20 a-besvarelse regresjonsutskrift over 6 modeller
+  stargazer(reg1, reg2, reg3, reg4, reg5, reg6, 
+          type = "html", out = "stargazer.html", 
+          covariate.labels = c("Mandag", "Tirsdag", "Onsdag", "Torsdag", "Fredag", "Lørdag", "Tidindeks", "Intercept (Søndag)"),
+          column.labels = c("Totale flygninger", "Innenlandsflygninger", "Utenlandsflygninger"),
+          column.separate = c(2, 2, 2),
+          dep.var.caption = "Avhengige variabler",
+          dep.var.labels = c("Daglig", "Kumulativt", "Daglig", "Kumulativt", "Daglig", "Kumulativt"), omit.stat = "f")
+# Kan legge inn single.row = TRUE om vi har lite plass.
