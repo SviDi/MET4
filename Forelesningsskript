@@ -1,0 +1,1131 @@
+
+# ---------------------------------- #
+# R-SCRIPT                           #
+# MET4 - EMPIRISKE METODER           #
+# NHH NORGES HANDELSH?YSKOLE         #
+#                                    #
+# MODUL 1: GRUNNLEGGENDE STATISTIKK  #
+# ---------------------------------- #
+
+## DEL I: DESKRIPTIV STATISTIKK --------- 
+
+# Laster inn data for sp?rreunders?kelsen
+library(readr)
+library(dplyr)
+
+survey <- read_csv("data_survey.csv")
+
+# Sjekker datatyper
+str(survey)
+
+# M?l for sentraltendens
+mean(survey$age)
+median(survey$age)
+
+median(survey$religious)
+median(survey$religious, na.rm = TRUE)
+
+table(survey$party)                       # Kan lese av typetallet manuelt.
+table(survey$party) %>% which.max()       # Eller bruke funksjonen which.max()
+
+# M?l for spredning
+fishermen <- 
+  read_csv("data_fishermen_mercury.csv")
+
+# Gjennomsnitt og st. avvik
+mean(fishermen$total_mercury)
+sd(fishermen$total_mercury)
+
+# Kvantiler
+quantile(fishermen$total_mercury, 0.20)
+
+# Kvartilene
+quantile(fishermen$total_mercury) 
+
+# Bokplot
+library(ggplot2)
+
+# En variabel
+fishermen %>% 
+  ggplot +
+  geom_boxplot(aes(y = total_mercury)) 
+
+# Deler opp i grupper basert p? en annen variabel
+fishermen %>% 
+  ggplot +
+  geom_boxplot(aes(y = total_mercury, x = as.factor(fisherman))) 
+
+# Her er en side som viser hvordan vi kan jobbe med boksplottet v?rt for ? gj?re det penere:
+# http://www.sthda.com/english/wiki/ggplot2-box-plot-quick-start-guide-r-software-and-data-visualization
+#
+# For eksempel:
+
+fishermen %>% 
+  ggplot +
+  geom_boxplot(aes(x = as.factor(fisherman), y = total_mercury, fill = as.factor(fisherman))) +
+  xlab("Fisker") +
+  ylab("Andel kvikks?lv") +
+  labs(fill = "Fisker?") +
+  theme_classic()
+
+# Presentasjon av kategoridata
+table(survey$religious)     # Frekvenstabell 
+
+# Krysstabell med to kategorivariabler:
+survey %>% 
+  select(party, religious) %>% 
+  table
+
+# Den grafiske varianten av frekvenstabellen er s?ylediagrammet
+survey %>% 
+  ggplot +
+  geom_bar(aes(x = as.factor(religious)))
+
+# Her er en bearbeidet variant:
+survey %>% 
+  ggplot +
+  geom_bar(aes(x = as.factor(religious))) +
+  xlab("Religi?sitet (Skala 0 -- 10)") +
+  ylab("Antall") +
+  theme_classic()
+
+# Grafisk presentasjon av m?ledata
+survey %>% 
+  ggplot + 
+  geom_histogram(aes(x = age))
+
+# En bearbeidet variant
+survey %>% 
+  ggplot + 
+  geom_histogram(aes(x = age), bins = 12) +
+  xlab("Alder") +
+  ylab("Antall") +
+  theme_classic()
+
+# Grafisk presentasjon av sammenhengen mellom to m?levariabler
+fishermen %>% 
+  ggplot + 
+  geom_point(aes(x = height, y = weight))
+
+# En bearbeidet variant
+fishermen %>% 
+  ggplot + 
+  geom_point(aes(x = height, y = weight)) +
+  xlab("H?yde") +
+  ylab("Vekt") +
+  ggtitle("Sammenheng mellom h?yde og vekt") +
+  theme_classic()
+
+# Korrelasjonskoeffisienten
+cor(fishermen$height, fishermen$weight)
+
+library(ggplot2)
+library(readxl)
+returns <- read_xlsx("Xm03-02.xlsx")
+returns
+
+#To enkle histogrammer
+ggplot(returns, aes(x = `Return A`)) +
+  geom_histogram(bins = 10)
+ggplot(returns, aes(x = `Return B`)) +
+  geom_histogram(bins = 10)
+
+# Vi skriver inn datasettet i en vektor
+demand <- c(235, 374, 309, 499, 253, 
+            421, 361, 514, 462, 369,
+            394, 439, 348, 344, 330,
+            261, 374, 302, 466, 535,
+            386, 316, 296, 332, 334)
+
+# Vi trenger 4 verdier for å regne ut konfidensintervallet:
+gj.snitt <- mean(demand)     # Regner ut gjennomsnittet
+z <- 1.96                    # Denne finner vi i tabellen
+sigma <- 75                  # Oppgitt i oppgaven
+n <- length(demand)          # Antall observasjoner
+
+# Vårt estimat av forventningsverdien er bare gjennomsnittet. 
+# Regner ut nedre og øvre grense i konfidensintervallet (LCL, UCL):
+LCL <- gj.snitt - z*sigma/sqrt(n)
+UCL <- gj.snitt + z*sigma/sqrt(n)
+
+# Samler de tre tallene i en vektor og skriver ut:
+c(LCL, gj.snitt, UCL)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# ---------------------------------- #
+# R-SCRIPT                           #
+# MET4 - EMPIRISKE METODER           #
+# NHH NORGES HANDELSH?YSKOLE         #
+#                                    #
+# MODUL 2: HYPOTESETESTING           #
+# ---------------------------------- #
+
+## DEL II: Inferens om en populasjon
+
+library(readxl)
+testdata <- read_excel("ovelsesdata.xls")
+
+# t-test
+gj.snitt <- mean(testdata$X2)
+st.avvik <- sd(testdata$X2)
+n        <- nrow(testdata) 
+
+T <- (gj.snitt - 100)/(st.avvik/sqrt(n))
+K <- qt(0.95, df = n - 1)
+
+t.test(x = testdata$X2, alternative = "greater", mu = 100)
+
+# Varianstest
+s <- sd(testdata$X2)
+sigma_0 <- 10
+n <- length(testdata$X2)
+
+# Testobservatoren
+T <- (n-1)*s^2/sigma_0^2
+
+# Kritiske verdier
+L <- qchisq(0.025, df = n - 1)
+U <- qchisq(0.975, df = n - 1)
+
+## DEL III: Inferens om to populasjoner
+
+gj.snitt1 <- mean(testdata$X1)
+gj.snitt2 <- mean(testdata$X2)
+
+S1 <- sd(testdata$X1)
+S2 <- sd(testdata$X2)
+
+n1 <- n2 <- nrow(testdata)
+
+Sp <- sqrt(((n1-1)*S1^2 + (n2-1)*S2^2)/(n1 + n2 - 2))
+
+# Antar lik varians
+T1 <- (gj.snitt2 - gj.snitt1)/sqrt(Sp^2*(1/n1 + 1/n2))
+K1 <- qt(0.975, df = n1 + n2 - 2)
+
+# Antar ulik varians
+T2 <- (gj.snitt2 - gj.snitt1)/sqrt(S1^2/n1 + S2^2/n2)
+nu <- (S1^2/n1 + S2^2/n2)^2/((S1^2/n1)^2/(n1-1) + (S2^2/n2)^2/(n2-1))
+K2 <- qt(0.975, df = nu)
+
+# De to variantene i t.test()-funksjonen
+t.test(testdata$X1, testdata$X2, var.equal = TRUE)
+t.test(testdata$X1, testdata$X2, var.equal = FALSE)
+
+# Matchede par
+D <- testdata$X2 - testdata$X1
+
+gj.snitt_D <- mean(D)
+st.avvik_D <- sd(D)
+
+t.test(D, mu = 0)
+t.test(testdata$X1, testdata$X2, paired = TRUE)
+
+# Sammenligning av to varianser
+F <- S1^2/S2^2
+K <- qf(0.975, n1-1, n2-1)
+
+var.test(testdata$X1, testdata$X2)
+
+# Sammenligning av to andeler
+
+p1_hatt <- mean(testdata$A1)
+p2_hatt <- mean(testdata$A2)
+
+p_hatt <- mean(c(testdata$A1, testdata$A2))
+
+## DEL IV: Kjikvadrattester
+
+# Eksempel 15.1 
+
+p0 <- c(0.45, 0.40, 0.15)  # Fordeling under H0
+f  <- c(102, 82, 16)       # Observerte frekvenser
+e  <- p0*sum(f)            # Forv. frekv. under H0
+
+T  <- sum((f - e)^2/e)     # Testobservator
+
+c  <- qchisq(.95, df = 2)  # Kritisk verdi
+
+# Forkast H0?
+T > c
+
+# Eventuelt direkte
+chisq.test(x = f, p = p0)
+
+# Test for uavhengighet
+immigration <-
+  read_xls("immigration-wide.xls",
+           range = "B2:E12",
+           col_names = c("many", "some", "few", "none"))
+chisq.test(immigration)
+
+# Eksempel med antall drap
+f <- c(259, 387, 261, 131, 40, 13, 3, 0)
+e <- c(264, 376, 267, 127, 45, 13, 3, 1)
+
+sum((f - e)^2/e)
+qchisq(.95, df = 7)
+
+# Mer om dette eksempelet i David Spiegelhalters bok
+# "The Art of Statistics: Learning from Data"
+
+
+# Leser inn datasettet
+funds <- read_xlsx("Xm13-01.xlsx")
+
+# Ser at det er to kolonner, «Direct» og «Broker». Alternativhypotesen på s.433 spesifiserer at
+# differansen i forventninger er *større* enn null, signifikansnivået skal være 5%. Antar først 
+# ulik varians og at vi ikke skal gjøre en paret test:
+t.test(funds$Direct, funds$Broker,
+       alternative = "greater",
+       paired = FALSE,
+       var.equal = FALSE,
+       conf.level = 0.95) 
+
+# Ser at det er to kolonner, «Direct» og «Broker». Alternativhypotesen på s.433 spesifiserer at
+# differansen i forventninger er *større* enn null, signifikansnivået skal være 5%. Antar først 
+# ulik varians og at vi ikke skal gjøre en paret test:
+t.test(funds$Direct, funds$Broker,
+       alternative = "greater",
+       paired = FALSE,
+       var.equal = TRUE,
+       conf.level = 0.95) 
+
+# Ser at det er to kolonner, «Direct» og «Broker». Alternativhypotesen på s.433 spesifiserer at
+# differansen i forventninger er *større* enn null, signifikansnivået skal være 5%. Antar først 
+# ulik varians og at vi ikke skal gjøre en paret test:
+t.test(funds$Direct, funds$Broker,
+       alternative = "greater",
+       paired = TRUE,
+       conf.level = 0.95) 
+
+bottle <- read_xlsx("Xm13-07.xlsx")
+var.test(bottle$`Machine 1`, bottle$`Machine 2`,
+         alternative = "greater")
+
+
+# Laster inn data. Her er det to utvalg med forskjellig antall observasjoner, så jeg 
+# velger å lese inn de to kolonnene hver for seg:
+soap1 <- read_xlsx("Xm13-09.xlsx", range = cell_cols("A"))
+soap2 <- read_xlsx("Xm13-09.xlsx", range = cell_cols("B"))
+
+# Hvor stor andel utgjør «9077» i de to kolonnene?
+p1 <- mean(soap1 == 9077)
+p2 <- mean(soap2 == 9077)
+
+# De to utvalgsstørrelsene:
+n1 <- nrow(soap1)
+n2 <- nrow(soap2)
+
+# Felles estimat for p under nullhypotesen:
+p <- (n1*p1 + n2*p2)/(n1 + n2)
+
+# Testobservatoren:
+z <- (p1 - p2)/sqrt(p * (1-p)*(1/n1 + 1/n2))
+
+# Kritisk verdi på 5% nivå for en ensidig test:
+qnorm(0.95)
+
+
+
+
+
+
+
+
+
+
+# ---------------------------------- #
+# R-SCRIPT                           #
+# MET4 - EMPIRISKE METODER           #
+# NHH NORGES HANDELSH?YSKOLE         #
+#                                    #
+# MODUL 3: Regresjon                 #
+# ---------------------------------- #
+
+## DEL I: Enkel Regresjon
+
+library(readxl)
+library(ggplot2)
+
+# Bileksempel
+cars <- read_excel("Xm16-02.xls")
+head(cars)
+
+ggplot(cars) +
+  geom_point(aes(x = Odometer, y = Price)) +
+  ggtitle("Kj?relengde vs. Pris")
+
+# M?t din nye bestevenn: lm()-funksjonen
+reg <- lm(Price ~ Odometer, data = cars)
+summary(reg)
+
+# Plott regresjonslinjen
+x <- seq(15, 50, by = 0.5)
+pred <- predict(reg, newdata = data.frame(Odometer = x))
+regresjonslinjen <- data.frame(Odometer = x, fit = pred)
+ggplot(cars) +
+  geom_point(aes(x = Odometer, y = Price)) +
+  geom_line(aes(x = Odometer, y = fit), data = regresjonslinjen) +
+  ggtitle("Med estimert regresjonslinje")
+
+# Konfidensintervall for regresjonslinjen
+x <- seq(15, 50, by = 0.5)
+pred <- predict(reg, newdata = data.frame(Odometer = x),
+                interval="confidence", level = 0.95)
+conf_interval <- data.frame(x = x, pred)
+ggplot(cars) +
+  geom_point(aes(x = Odometer, y = Price)) +
+  geom_line(aes(x = x, y = fit), data = conf_interval) +
+  geom_ribbon(aes(x = x, ymin = lwr, ymax = upr), 
+              data = conf_interval, alpha = .3) +
+  ggtitle("Med konfidensintervall for regresjonslinjen")
+
+# Pediksjonsintervall for nye observasjoner
+pred <- predict(reg, newdata = data.frame(Odometer = x),
+                interval="prediction", level = 0.95)
+pred_interval <- data.frame(x = x, pred)
+ggplot(cars) +
+  geom_point(aes(x = Odometer, y = Price)) +
+  geom_line(aes(x = Odometer, y = fit), data = regresjonslinjen) +
+  geom_ribbon(aes(x = x, ymin = lwr, ymax = upr), 
+              data = conf_interval, alpha = .3) +
+  geom_ribbon(aes(x = x, ymin = lwr, ymax = upr), 
+              data = pred_interval, alpha = .3) +
+  ggtitle("...og med prediksjonsidensintervall for regresjonslinjen i tillegg")
+
+
+# Residualplott for ? se etter heteroskedastisitet
+str(reg)
+
+residualer <- data.frame(residualer = reg$residuals,
+                         predikert = reg$fitted.values)
+
+ggplot(residualer, aes(x = predikert, y = residualer)) +
+  geom_point()
+
+# Residualplott for ? se etter autokorrelasjon
+residualer <- data.frame(residualer = reg$residuals,
+                         t = 1:length(reg$residuals))
+
+ggplot(residualer, aes(x = t, y = residualer)) +
+  geom_point() +
+  geom_line()
+
+# Autokorrelasjonsplott
+acf(reg$residuals)
+
+# Histogram over residualer for ? sjekke normalitetsantakelsen.
+residualer <- data.frame(residualer = reg$residuals)
+ggplot(residualer, aes(x = residualer)) +
+  geom_histogram()
+
+# QQ-plott, observasjonene ligger langs en rett linje hvis de er normalfordelte
+ggplot(residualer, aes(sample = residualer)) +
+  stat_qq() +
+  stat_qq_line()
+
+# Plott av regresjonslinje og ulike diagnoseplott, ferdig pyntet.
+x <- seq(15, 50, by = 0.5)
+pred <- predict(reg, newdata = data.frame(Odometer = x))
+regresjonslinjen <- data.frame(Odometer = x, fit = pred)
+ggplot(cars) +
+  geom_point(aes(x = Odometer, y = Price)) +
+  geom_line(aes(x = Odometer, y = fit), data = regresjonslinjen) +
+  ggtitle("Bildata med estimert regresjonslinje") +
+  xlab("Kj?relengde") +
+  ylab("Pris") +
+  theme_classic()
+
+# Residualplott
+residualer <- data.frame(residualer = reg$residuals,
+                         predikert = reg$fitted.values,
+                         t = 1:length(reg$residuals))
+
+ggplot(residualer, aes(x = predikert, y = residualer)) +
+  geom_point() +
+  xlab("Predikert verdi") +
+  ylab("Observert residual") +
+  ggtitle("Predikert verdi mot residual") +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  theme_classic()
+
+# Histogram
+ggplot(residualer, aes(x = residualer)) +
+  geom_histogram(bins = 8) +
+  xlab("Residualer") +
+  ylab("") +
+  ggtitle("Histogram for observerte residualer") +
+  theme_classic()
+
+# QQ-plott
+ggplot(residualer, aes(sample = residualer)) +
+  stat_qq() +
+  stat_qq_line() +
+  xlab("Teoretiske kvantiler") +
+  ylab("Observerte kvantiler") +
+  ggtitle("QQ-plott") +
+  theme_classic()
+
+# Stargazer for regresjonstabell
+library(stargazer)
+stargazer(reg, type = "text")
+stargazer(reg, type = "html", out = "regresjonstabell.html")
+
+# Innflytelsesrike observasjoner
+
+oslo <- data.frame(fritak = c(4, 4.5, 3.8, 5.2, 0, 6, 2.8, 7.5, 14.1),
+                   lesing = c(48, 52, 53, 53.5, 50, 52, 50, 52, 65)) 
+
+oslofit1 <- lm(lesing ~ fritak, data = oslo)
+oslofit2 <- lm(lesing ~ fritak, data = oslo[-9,])
+
+stargazer(oslofit1, oslofit2, type = "text")
+
+infl <- influence.measures(oslofit1)
+
+infl$infmat
+infl$is.inf
+
+# Lager enkelt plott av Cooks avstand
+cooks_avstand <- data.frame(obs = 1:nrow(oslo),
+                            cook = infl$infmat[, "cook.d"],
+                            cook_infl = infl$is.inf[, "cook.d"])
+
+ggplot(cooks_avstand, aes(x = obs, y = cook)) +
+  geom_col()
+
+## CASE: APPLE OG NETFLIX
+
+library(readr)
+library(stargazer)
+library(ggplot2)
+
+# Leser datasett
+nasdaq <- read_csv("Xr04-NASDAQ.csv")
+
+# Kj?rer regresjonene
+apple   <- lm(Index ~ AAPL, data = nasdaq)
+netflix <- lm(Index ~ NFLX, data = nasdaq)
+
+# Lager en pen regresjonstabell
+stargazer(apple, netflix, type = "text")
+
+# Plott av regresjonslinje og ulike diagnoseplott:
+x <- seq(-0.15, 0.2, by = 0.005)
+pred <- predict(apple, newdata = data.frame(AAPL = x))
+regresjonslinjen <- data.frame(AAPL = x, fit = pred)
+ggplot(nasdaq) +
+  geom_point(aes(x = AAPL, y = Index)) +
+  geom_line(aes(x = AAPL, y = fit), data = regresjonslinjen) +
+  ggtitle("AAPL mot Index") +
+  xlab("Apple") +
+  ylab("Index") +
+  theme_classic()
+
+residualer <- data.frame(residualer = apple$residuals,
+                         predikert = apple$fitted.values,
+                         t = 1:length(apple$residuals))
+
+# Residualplott
+ggplot(residualer, aes(x = predikert, y = residualer)) +
+  geom_point() +
+  xlab("Predikert verdi") +
+  ylab("Observert residual") +
+  ggtitle("Predikert verdi mot residual") +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  theme_classic()
+
+# Histogram
+ggplot(residualer, aes(x = residualer)) +
+  geom_histogram(bins = 12) +
+  xlab("Residualer") +
+  ylab("") +
+  ggtitle("Histogram for observerte residualer") +
+  theme_classic()
+
+# QQ-plott
+ggplot(residualer, aes(sample = residualer)) +
+  stat_qq() +
+  stat_qq_line() +
+  xlab("Teoretiske kvantiler") +
+  ylab("Observerte kvantiler") +
+  ggtitle("QQ-plott") +
+  theme_classic()
+
+# Autokorrelasjon
+acf(apple$residuals)
+
+# Innflytelsesrike observasjoner
+infl <- influence.measures(apple)
+
+infl$is.inf
+
+cooks_avstand <- data.frame(obs = 1:nrow(nasdaq),
+                            cook = infl$infmat[, "cook.d"],
+                            cook_infl = infl$is.inf[, "cook.d"])
+
+ggplot(cooks_avstand, aes(x = obs, y = cook)) +
+  geom_col()
+
+## DEL II: Multippel regresjon
+
+# G?r R^2 opp ved ? forklare Nasdaq-indeksen med b?de Netflix og Apple?
+begge <- lm(Index ~ AAPL + NFLX, data = nasdaq)
+stargazer(apple, netflix, begge, type = "text")
+
+# La oss generere noen tilfeldige tall, og se hva som skjer:
+nasdaq_ny <- data.frame(nasdaq,
+                        tilfeldig = runif(n = nrow(nasdaq)))
+med_random <- lm(Index ~ AAPL + NFLX + tilfeldig, data = nasdaq_ny)
+stargazer(begge, med_random, type = "text")
+
+# Last inn skoledata
+skoledata <- read_excel("skoledata.xls", na = "NA")
+
+# Perfekt autokorrelasjon: lager en ny variabel som er 2*folketall:
+skoledata2 <- data.frame(skoledata,
+                         folketall2 = 2*skoledata$folketall)
+
+reg <- lm(lesing ~ folketall + folketall2, data = skoledata2)
+
+# Tre regresjoner: en med folketall, en med antall og en med begge (+ mobbing):
+reg1 <- lm(lesing ~ log(folketall), data = skoledata)
+reg2 <- lm(lesing ~ log(antall), data = skoledata)
+reg3 <- lm(lesing ~ log(folketall) + log(antall) + mobbing, data = skoledata)
+
+stargazer(reg1, reg2, reg3, type = "text")
+
+#install.packages("car")
+library(car)
+vif(reg3)
+
+## DEL 3: MODELLBYGGING
+
+library(readxl)
+library(stargazer)
+library(ggplot2)
+
+# Laster inn skoledata
+skoledata <- read_excel("skoledata.xls")
+head(skoledata)
+
+# Forklarer lesing vha folketall og driftsutgifter hhv.
+reg1 <- lm(lesing ~ folketall, data = skoledata)
+reg2 <- lm(lesing ~ driftsutgifter, data = skoledata)
+
+# Forklarer lesing vha *b?de* f.tall og dr.utgifter
+reg3 <- lm(lesing ~ folketall + driftsutgifter,
+           data = skoledata)
+
+# Lager en regresjonstabell
+stargazer(reg1, reg2, reg3, type = "text")
+
+# Noen plott
+ggplot(skoledata) +
+  geom_point(aes(x = folketall, y = lesing)) +
+  xlab("Folketall") +
+  ylab("Lesescore") +
+  theme_classic()
+
+ggplot(skoledata) +
+  geom_point(aes(x = driftsutgifter, y = lesing)) +
+  xlab("Driftsutgifter") +
+  ylab("Lesescore") +
+  theme_classic()
+
+
+# log(folketall) mot lesing
+ggplot(skoledata) +
+  geom_point(aes(x = log(folketall), y = lesing)) +
+  xlab("log(Folketall)") +
+  ylab("Lesescore") +
+  theme_classic()
+
+# Bruker log(folketall) som forklaringsvariabel
+reg4 <- lm(lesing ~ log(folketall) + driftsutgifter,
+           data = skoledata)
+summary(reg4)
+
+# Fjerner driftsutgifter, lager ny tabell
+reg5 <- lm(lesing ~ log(folketall), 
+           data = skoledata)
+stargazer(reg4, reg5, type = "text")
+
+# Eksempel p? ? lage en ny kolonne med kvadrater i skoledatasettet:
+skoledata2 <- cbind(skoledata,
+                    antall_kvadert = skoledata$antall^2)
+
+# Bruker en dummyvariabel
+reg6 <- lm(lesing ~ log(folketall) + nynorsk, data = skoledata)
+summary(reg6)
+
+# Legger til interaksjonsledd
+reg7 <- lm(lesing ~ log(folketall)*nynorsk, data = skoledata)
+summary(reg7)
+
+# Lager stargazertabell
+stargazer(reg6, reg7, type = "text")
+
+
+
+
+
+
+# Data
+library(ISLR)       
+
+# Se på dataene
+head(Default)  
+
+# Ingen omkoding trengs:
+str(Default$default)
+
+# trening og testsett
+nrow(Default)
+train <- Default[1:7000, ]
+test <- Default[7001:1000, ]
+
+# modell
+model1 <- glm(default ~ balance, data = train,
+              family = "binomial")
+summary(model1)
+exp(coef(model1))
+1.055^50
+
+# prediksjon
+to_personer <- data.frame(balance = c(1000, 2000))
+pred <- predict(model1, newdata = to_personer, type = "response")
+klass <- ifelse(pred > 0.5, "Yes", "No")
+
+#--------- test av klassifiseringsevne
+
+sann <- test$default                                              # Den sanne verdien i testdataene
+pred_test <- predict(model1, newdata = test, type = "response")   # Predikert sannsynlighet
+klassifisering <- ifelse(pred_test > 0.5, "Yes", "No")            # Klassifisering av kundene
+table(sann, klassifisering)                                       # Kontigenstabell
+
+
+
+
+
+
+
+# Dataene får vi tak i via pakken ISLR
+library(ISLR)       
+head(Default)       
+
+# Trenger denne pakken for KNN:
+# install.packages("caret")
+library(caret)
+
+# Hvis vi vil sette k selv
+model1 <- train(default ~ balance,
+                data = Default,
+                method = "knn",
+                tuneGrid = data.frame(k = 50))
+
+
+# R-kode dersom vi vil velge k automatisk med kryssvalidering
+trControl <- trainControl(method  = "cv", # 5-fold kryssvalidering
+                          number  = 5)
+
+# Tilpasser modellen
+model2 <- train(default ~ balance,
+                data = Default,
+                method = "knn",
+                trControl  = trControl,
+                metric     = "Accuracy")
+
+# Hvilken k valgte kryssvalideringen?
+k <- model2$finalModel$k
+k
+
+# prediksjon av to kunder 
+to_kunder <- data.frame(balance = c(1500,500))
+predict(model2, newdata = to_kunder)
+
+
+
+
+
+
+# PANELDATA
+# -------------------
+library(plm)
+
+# Innlesning av data: OBS! Linken i videoen fungerer ikke så du må laste ned
+# panel_liten.csv fra modulen selv og så lese inn på vanlig måte:
+df <- read.csv("panel_liten.csv")
+
+
+# Oversetter til panel data frame
+p.df <- pdata.frame(df,
+                    index = c("id" ,"year"))
+
+
+# Fixed effect model
+reg.fe <- plm(lnwg ~ lnhr,
+              data = p.df,
+              model = "within")
+summary(reg.fe)
+fixef(reg.fe)
+
+# random effect model
+reg.re <- plm(lnwg ~ lnhr,
+              data = p.df,
+              model = "random")
+summary(reg.re)
+
+
+# Test av H0: begge modeller gyldige mot H1: en av dem er ikke.
+phtest(reg.fe, reg.re)
+
+
+
+
+
+
+##Paneldata med nice farger til figurer
+df <- read.csv("panel_liten.csv")              # Leser inn datasettet
+head(df)                                       # Ser på datasettet
+
+library(ggplot2)  
+ggplot(df) +
+  geom_point(aes(x = year, y = lnwg, color = factor(id)))
+
+library(ggplot2)  
+ggplot(df) +
+  geom_point(aes(x = lnhr, y = lnwg, color = factor(id)))
+
+library(plm)      # Pakke for å estimere faste effekter
+
+# Oversetter til panel data frame
+p.df <- pdata.frame(df,
+                    index = c("id" ,"year"))
+
+reg.fe <- plm(lnwg ~ lnhr,
+              data = p.df,
+              model = "within")
+summary(reg.fe)
+
+fixef(reg.fe)
+
+plot(reg.fe)
+
+is.factor(p.df$year)
+
+reg.fe <- plm(lnwg ~ lnhr + year,
+              data = p.df,
+              model = "within")
+summary(reg.fe)
+
+
+
+# tilfeldig effekt modell
+reg.re <- plm(lnwg ~ lnhr,
+              data = p.df,
+              model = "random")
+summary(reg.re)
+
+
+# Hausman test
+phtest(reg.fe, reg.re)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#Tidsrekker
+
+
+
+
+library(readxl)
+equinor <- read_excel("equinor.xlsx")
+pris <- rev(equinor$Siste)                
+
+plot(pris, type = "l")
+
+##For glidende gjennomsnitt skal vi bruke funksjonen rollmean() 
+##i pakken zoo. Du må først installere pakken og laste den inn;
+install.packages("zoo")
+library(zoo)
+
+#kan regne ut f.eks et glidende gjennomsnitt for Equinoraksjen med vindusstørrelse 5 ved å kjøre
+pris_glatt5 <- rollmean(pris, k = 5, fill = NA)
+
+##Da får vi ut en ny vektor med lik lengde som den vi hadde, og som inneholder den 
+##glattede versjonen. Den fyller opp verdiene i starten og slutten som vi ikke kan 
+##regne ut med et glidende gjennomsnitt med NA, slik at vi kan tegne inn den glattede 
+##versjonen i samme plott som vi viste selve tidsrekken:
+lines(pris_glatt5, col = "red")
+
+##hol winters metode
+pris_exp1 <- HoltWinters(pris, alpha = .5, beta = FALSE, gamma = FALSE)
+
+##Henter ut den glattede versjonen
+pris_exp1$fitted[,"xhat"]
+
+
+
+
+
+
+
+
+
+
+##trend og sesong
+install.packages("fpp")
+library(fpp)
+plot(ausbeer)
+
+## Funksjonen stl dekomponerer tidsrekken i de tre komponentene: trend, sesong, og tilfeldig variasjon. 
+##For å få tilgang på denne funskjonen trenger vi pakken forecast:
+install.packages("forecast")
+library(forecast)
+
+#Kjører funksjonen slik
+dekomponert <- stl(ausbeer, s.window = "periodic")
+
+##Vi kan hente ut de ulike komponentene ved å bruke dollartegnet: dekomponert$time.series. 
+##Pakken forecast har en egen plottefunksjon, autoplot som er spesialdesignet for tidsrekkeobjekter. 
+##Prøv å plotte de tre komponentene hver for seg ved å kjøre:
+
+autoplot(dekomponert)
+
+##Kodesnutten under viser hvordan man predikerer 10 tidssteg frem i tid ved å sette h = 10 i 
+##funksjonen. I tillegg kan funksjonen regne ut prediksjonsintervall med en gitt dekningsgrad, 
+##her velger vi level = 0.95 for 95 % prediksjonsintervall. Resultatet lagrer vi i objektet prediksjon. 
+##Dette objektet kan vi plotte ved bruk av autoplot-funksjonen
+prediksjon <- forecast(dekomponert, h = 10, level = 0.95)
+autoplot(prediksjon)
+
+
+
+
+
+##AR(p)
+#La oss først se hvordan vi kan simulere noen realiseringer fra disse tidsrekkene.
+n <- 50
+hvit_støy <- rnorm(n)
+plot(hvit_støy, type = "b")
+
+##Vi kan bruke funksjonen arima.sim() til å simulere tidsrekker fra AR-modellen 
+## Du kan for eksempel simulere n observasjoner fra en AR(1)-prosess med ϕ = 0.95 
+##ved hjelp av følgende kommandoer:
+ar1 <- arima.sim(model = list(ar = 0.95), n)
+plot(ar1, type = "b")
+
+
+
+##La oss i første omgang si at vi har observert tidsrekken ar1 som vi simulerte over, 
+##at vi mistenker at den følger en AR(1)-prosess Y t = ϕ Y t − 1 + u t , og at vi ønsker 
+##å estimere den ukjente parameteren ϕ ved hjelp av observasjonene. Som vi antydet i AR-videoen 
+##kan vi i dette tilfellet betrakte det som et regresjonsproblem med Y t som responsvariabel og 
+##Y t − 1 som forklaringsvariabel. La oss lage en data.frame med disse to kolonnene, og se 
+##hva vi får når vi bruker lm()-funksjonen. .
+df <- data.frame(Y = ar1[2:n],
+                 lagged_Y = ar1[1:(n-1)])
+summary(lm(Y ~ lagged_Y, data = df))
+
+##forecast pakken inneholder en funskjon Arima for å estimere koeffisientene i en AR-modell 
+## Denne funksjonen kan vi andvende direkte på tidsrekken ved å skrive
+Arima(ar1, order = c(1, 0, 0))
+
+##Dersom du mistenker at AR(2)-modellen gir en bedre beskrivelse av tidsrekken din, 
+##kan du endre til order = c(2, 0, 0).
+
+
+
+##For predikering bruker vi funksjonen forecast(), som tar en estimert modell som input, 
+##og som bruker modellen til å skrive frem tidsrekken ved å estimere fremtidige verdier. 
+##I kodesnutten under bruker vi den simulerte tidsrekken, og estimerer en AR(1)-modell 
+##som over som vi lagrer i objektet ar1_estimat. Så bruker vi det som argument i forecast(), 
+##der vi også spesifiserer hvor mange tidssteg fremover vi ønsker å predikere, 
+##her velger vi h = 10. I tillegg kan funksjonen regne ut prediksjonsintervall med en 
+##gitt dekningsgrad, her velger vi level = 0.95 for 95 % prediksjonsintervall. 
+#Resultatet lagrer vi i objektet prediksjon
+
+
+ar1_estimat <- Arima(ar1, order = c(1, 0, 0))
+prediksjon  <- forecast(ar1_estimat, h = 10, level = 0.95) 
+
+# Plotter den opprinnerlige tidsrekken, sammen med prediksjon og
+# prediksjonsintervall
+autoplot(prediksjon)
+
+
+
+##Utregning av ACF I R bruker vi funsksjonen acf() til å lage autokorrelasjonsplott. 
+##La oss i første omgang gjenskape noen av figurene fra videoen ved hjelp av simuleringer. 
+##For eksempel kan vi laget til to tidsrekker som på forrige oppgavesett, en hvit støy og en AR(1):
+n <- 50
+hvit_støy <- rnorm(n)
+ar1 <- arima.sim(model = list(ar = 0.95), n)
+
+##autokorrelasjonsplottene
+acf(hvit_støy)
+acf(ar1)
+
+
+
+##ACF som sjekk av modell En sjekk vi gjerne gjør for å se om en estimert 
+##tidsrekkemodell passer dataene våre, er å se autokorrelasjonen til residualene i
+##modellen er liten. Det betyr nemlig at modellen plukker opp den (lineære) avhengigheten 
+##i tidsrekken. For en AR(1) modell er residualene f.eks gitt ved ^ u t = Y t − ^ ϕ Y t − 1 , 
+##men disse er tilgjengelig direkte fra modell estimeringen i R:
+library(forecast)
+ar1_estimat <- Arima(ar1, order = c(1, 0, 0))
+acf(ar1_estimat$residuals)
+
+
+##Estimering og predikering. På samme måte som for AR-prosessen kan vi 
+#nå simulere og estimere en MA(1)-prosess med θ = 0.95 :
+library(forecast)                                # Trengs for estimering
+n    <- 100                                      # Antall observasjoner
+ma1  <- arima.sim(model = list(ma = 0.95), n)    # Simuler tidsrekken
+plot(ma1, type = "b")                            # Lag et plott 
+Arima(ma1, order = c(0,0,1))                     # Estimer theta
+
+##Analyse av global temperatur. La oss når ta for oss eksempelet fra videoen der 
+##vi ser på den globale månendlige gjennomsnittstemperaturen fra 1880 til 2016
+
+temp <- read.csv("temp.csv")
+head(temp)
+
+##Første kolonne inneholder informasjon om tidspunkt, og temperaturen er inneholdt i andre kolonne. 
+##La oss plotte både temperaturrekken og den differensierte temperaturrekken 
+##(dvs. forskjellen fra dag til dag). Hvis vi avslører at den differensierte 
+##tidsrekken kan regnes ut ved å kjøre difftemp <- diff(temp$Mean), skulle det nå 
+#være grei skuring å produsere følgende to enkle plott:
+difftemp <- diff(temp$Mean)
+plot(temp$Mean, type = "l")
+
+plot(difftemp, type = "l")
+
+##Vi kan bruke datasettet vårt til å estimere θ ved å bruke Arima()-funksjenen på samme måte 
+##som da vi estimerte en AR(1)-modell. Den eneste forandringen vi må gjøre er å 
+##endre order-argumentet fra c(1, 0, 0) til c(0, 0, 1):
+Arima(difftemp, order = c(0, 0, 1))
+
+
+##Vi tar en ny titt på den daglige prisen på Eqinoraksjen over en 
+##5-års periode som vi så på i introduksjonen til tidsrekker
+##Legg merke til at vi bruker rev()-funksjonen til å reversere rekkefølgen 
+##til observasjonene slik at den første verdien komme først:
+library(readxl)
+equinor <- read_excel("equinor.xlsx")
+pris <- rev(equinor$Siste)
+plot(pris, type = "l")
+
+
+# Sjekk av differanse 
+##kan lage en figur av den differensierte tidsrekken på følgende måte:
+diff_pris <- diff(pris)
+plot(diff_pris, type = "l")
+
+
+##Vi bruker den samme funksjonen Arima fra forecast pakken til å estimere både ARMA og 
+##ARIMA modeller og spesifisering av modellen gjør vi via argumentet order. 
+##Skal du estimerer en ARMA(1,1) modell setter du f.eks dette argumentet til c(1, 0, 1). 
+##Elementet i midten av denne vektoren spesifiserer hvor mange ganger tidsrekken skal differensieres 
+##i ARIMA modellen. Estimering av en ARIMA modell med en enkelt differensiering og ett 
+##MA og AR ledd kan gjøres slik:
+
+library(forecast)
+arima111 <- Arima(pris, order = c(1, 1 , 1))
+
+##Hvordan skal vi velge p, d og q i en ARIMA(p,d,q) modell? Etter å ha tilpasset en 
+##ARIMA modell kan vi bruke modellen til å predikere de samme observasjonene vi har 
+##brukt til å tilpasse modellen. Vi kan så sammenligne hvor nær prediksjoner fra 
+##forskjellige modeller er de sanne dataene. Dette heter på godt norsk å gjøre
+##en “in-sample” vurdering av modellen.
+
+#Når du har tilpasset en modell, kan du ved å bruke summary funksjonen få opp 
+##flere mål på hvor god modellen er in-sample under fanen “Training set error measure”:
+summary(arima111)
+
+##Sammenligner du flere modeller er du på jakt etter den modellen som har minst RMSE og/eller AIC.
+
+##Det krever en del arbeid skal du sammenligne mange ARIMA(p,d,q) modeller ettersom 
+##det er så mange måter å kombinere p,d og q på selv om du bestemmer en maksverdi 
+##for hver av dem. Det finnes heldigvis en veldig smart R funksjon kalt auto.arima 
+##som følger med pakken forecast som estimerer mange modeller og gir deg ut den modellen med minst AIC:
+
+arima_best_AIC <- auto.arima(pris)
+summary(arima_best_AIC)
+
+##Prediksjon gjøres som tidligere med forecast funksjonen, så hvis en vil predikere 10 tidssteg 
+##frem i tid gjør man følgende:
+pred_arima111 <- forecast(arima111, h =  10)
+
+
+
+
+
+##skal i denne øvingen prøve å finne en god modell for dax-indeksen:
+
+library(forecast)
+dax <- EuStockMarkets[ ,1]
+
+##Vi ønsker f.eks å teste hvor god modellen er til å predikere de 10 siste 
+##observasjonene i datasettet. Vi deler derfor dataene inn i et treningssett 
+##bestående av alle observasjoner utenom disse 10 siste observasjonene, og et 
+##testsett bestående av de 10 siste observasjonene:
+trening <- head(dax, length(dax) - 10)
+test <- tail(dax, 10)
+plot(dax)
+autoplot(pred_arima111, include = 100)
+
+##tilpasser så en modell til treningssettet ved bruk av eksponensiell glatting og 
+##predikerer 10 tidssteg frem for å få prediksjoner av testsettet:
+fit_exp <- HoltWinters(trening)
+pred_exp <- forecast(fit_exp, h = 10)
+
+#Merk at når vi ikke spesifiserer noen argumenter i HoltWinters 
+##vil en mer avansert modell bli tilpasset, samtidig som glattingsparameteren 
+#faktisk vil bli estimert ved å minimerer MSE.
+
+##Vi kan så sammenligne disse prediksjonene pred_exp med de faktiske 
+##observasjonene test ved å “måle” hvor langt disse er fra hverandre. 
+##Funksjonen accuracy som kommer med forecast pakken regner ut flere forskjellig mål på avstand:
+accuracy(pred_exp, test)
