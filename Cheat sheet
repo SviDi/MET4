@@ -1,0 +1,252 @@
+# We will be using the following packages in the course: forecast, dyn, plm,
+# lmtest, car, readxl, and lmtest. You need an internet connection as well as
+# administrative rights on your computer. It might be necessary to run RStudio
+# as an administrator to install these packages (Windows: Right click on the 
+# RStudio icon, choose "Run as administrator"). You install the packages by 
+# running the following commands: 
+install.packages("forecast")
+install.packages("dyn")
+install.packages("plm")
+install.packages("lmtest")
+install.packages("car")
+install.packages("readxl")
+install.packages("lmtest")
+install.packages("stargazer")
+
+
+# When you want to use a packagate it must be loaded into R. This has to be 
+# done each time you start a new session in R. The following loads all the
+# packages above: 
+library(forecast)
+library(dyn)
+library(plm)
+library(lmtest)
+library(car)
+library(readxl)
+library(lmtest)
+library(stargazer)
+
+
+###############################################################################
+###                             R-utilities                                 ###
+###############################################################################
+
+# Clear the entire workspace
+rm(list=ls())
+
+# Display the current working directory
+getwd()
+
+# Change the working directory to C:/Met_4/. Note forward slashes. 
+setwd("C:/Met_4/")
+# Read the contents of a xlsx-file. This will be stored as a data frame with 
+# the name data.df. This function comes from the readxl-library. 
+data.df <- read_excel("excel_file.xlsx")
+
+# Inspect the first couple of rows of the data.df. 
+head(data.df)
+
+# Make pretty regression output tables. 
+stargazer(reg.1, reg.2, ## First list all the regression models to print
+          type="text"   ## Then what type of output we want. 
+)
+
+# Alternatively, we can store it as a html-table. You can open the html-file
+# with a web browser. From there, you can copy the table into e.g. MS Word. 
+stargazer(reg.1, reg.2, 
+          type="html",   
+          out="reg_table.html")
+
+# Find which elements of variable X in data frame data.df greater than or 
+# equal to 1.
+data.df$X>=1
+
+# Display the observations in the dataset where X is  greater than or 
+# equal to 1.
+data.df[data.df$X>=1,]
+
+# Find the length of a variable
+length(data.df$X)
+
+# The sum of a variable:
+sum(data.df$X)
+
+# A list of indices where X is exactly equal to zero. 
+which(data.df$X==0)
+
+# All integers from 1 to 100
+1:100
+
+# Store a variable as a factor
+data.df$X    <- as.factor(data.df$X   )
+
+
+###############################################################################
+###                 Inference on one- and two populations                   ###
+###############################################################################
+
+# T-test of mean difference between X1 and X2
+t <- t.test(X1,                        # Sample of X1
+            X2,                        # Sample of X2  
+            var.equal = FALSE,        # Assume equal variances?
+            alternative="two.sided"   # One- or two-sided?
+)
+
+# Hypothesis testing of proportion in one group
+prop.test(sum(data.df$A1),    # Number of successes
+          length(data.df$A1), # Number of trials
+          p=0.5,                  # Null-hypothesis
+          correct=FALSE)          # Continuity-Correction 
+
+# Cross-tabulate data			 
+cross.table <- table(data.df$X1,data.df$X2)
+
+# Test if the proportions are the same for the X1 and X2. 
+test.res<-prop.test(cross.table, 
+                    correct = FALSE)
+
+# Test of equal variances in X1 and X2 
+t <- var.test(X1,
+              X2, 
+              ratio=1, 
+              alternative="two.sided")
+
+
+###############################################################################
+###                                Plots                                    ###
+###############################################################################
+
+# Basic scatterplot:
+plot(data.df$X1,data.df$X2,  ## First the data we want to plot
+     col=c("blue"),          ## Next specify that we want a blue color
+     type="l",               ## What type of line we want to draw
+     xlab="Name for X-axis", ## Legend for X-axis
+     ylab="Name for Y-axis") ## Legend for Y-axis
+
+
+# The following series of commands stores the figure as a file: 
+png(filename="xy_plot.png")   ## Start a graphics device, say you want it saved 
+## with the given name. 
+plot(data.df$X1,data.df$X2)   ## Instructions for the plot.
+lines(data.df$X3,data.df$X2)  ## Add a second scatterplot:
+dev.off()                     ## Tell R we are done creating the figure. 
+
+# Plot a regression line. Must first have store the regression output as "reg".
+abline(reg)
+
+# Add a legend to a plot
+legend("topleft",            ## Where the legend should be
+       legend=c("X1", "X2"), ## The names for the data series
+       col=c("blue", "red"), ## The colors of the lines      
+       lty=1,                ## What type of line to draw
+       bty="n")              ## Whether we want a box around the legend
+
+
+###############################################################################
+###                                 ANOVA                                   ###
+###############################################################################
+
+# Note that X1 and X2 should be stored as factors. 
+analysis.1 <- aov(Y ~ X1 * X2, data=data.df) # Interacation
+analysis.2 <- aov(Y ~ X1 + X2, data=data.df) # Additive
+analysis.3 <- aov(Y ~ X1     , data=data.df) # One-Way
+summary(analysis.1)                          # Summarise output
+tukey      <- TukeyHSD(analysis.3)           # Tukey
+plot(tukey)                                  # Plot Tukey-output
+boxplot(Y~X1, data=data.df)                  # Boxplot of the raw data. 
+
+
+###############################################################################
+###                     Linear regression models                            ###
+###############################################################################
+
+# Runs OLS with Y as dependent variable, and X1 and X2 as dependent variables.
+# The data is stored in the dataframe "data.df". The regression output is 
+# stores in a list called "reg". 
+reg <- lm(Y~X1+X2, data=data.df)
+
+# Calculates the VIF for variables used in regression "reg"
+vif(reg)
+
+# Similar to the regression above, except that here we only use a subset
+# of the observations to run the regression (observations 1 through 10).
+reg <- lm(Y~X1+X2, data=data.df, subset=1:10)
+
+# Running the following gives us several diagnostic plots after a regression.
+plot(reg)
+
+# DW, BG and BP tests on regression output. 
+durbin.watson.test   <- dwtest(reg)
+breusch.godfrey.test <- bgtest(reg, order=3)
+breusch.pagan.test   <- bptest(reg)
+
+# QQ plot
+qqnorm(reg$residuals)
+# add the reference line to the QQ-plot
+qqline(reg$residuals)
+
+# Use the regression model to make predictions. Data to use in prediction
+# is given by data.df. The option "prediction" says that we want confidence
+# bands for the mean. Setting this to "confidence" gives confidence interval
+# for a new observation. We set a 95 percent confidence level. 
+prediction <- predict.lm(reg, 
+                         data.df,
+                         interval="prediction",
+                         level=.95)
+						 
+###############################################################################
+###                               Panel data                                ###
+###############################################################################
+
+# Store time and id-variable as factors: 
+data.df$time.var    <- as.factor(data.df$time.var)
+data.df$id.var      <- as.factor(data.df$id.var)
+
+# Include time- and id-fixed efffects in a regression
+reg <- lm(Y~X1+X2+time.var+id.var, dat=data.df)
+
+###############################################################################
+###                                Time series                              ###
+###############################################################################
+
+# Store X as a time series variable. We tell R it is quarterly data, starting
+# in second quarter 1983. 
+data.df$X <- ts(data.df$X , freq=4, start=c(1983,2))
+
+# A dynamic regression, where regress X on its own lagged value. This is from
+# the dyn-package. 
+auto.reg <- dyn$lm(X~lag(X,-1), data=data.df)
+
+ggAcf(data.df$X)   # plot autocorrelation function of X
+ggPacf(data.df$X)  # plot partial autocorrelation function if X
+
+# Estimate an arima model on X. We only use data between 1983:2 and 2000:4. The
+# model is an ARIMA(2,0,2). 
+ar  <- arima(window(data.df$X, 
+                    start=c(1983,2), 
+				            end=c(2000,4)
+				            ),
+            order=c(2,0,2))
+
+# Display p-values etc. from an ARMA-model
+coeftest(ar)
+
+# Let R automatically find optimal orders of an ARIMA model fitted on X. 
+aut.ar <- auto.arima(data.df$X,
+                     stationary = TRUE,
+                     seasonal= FALSE)
+
+###############################################################################
+###                      Limited dependent variables                        ###
+###############################################################################
+
+# Note that the dependent variable should be codede as a factor. 
+# Logit: 
+reg.logit  <- glm(Y~X1+X2,
+                  family=binomial(link='logit'),
+                  data=data.df)
+# Probit:
+reg.probit <- glm(Y~X1+X2,
+                  family=binomial(link='probit'),
+                  data=data.df)
+
